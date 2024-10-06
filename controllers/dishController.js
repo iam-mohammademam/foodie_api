@@ -1,9 +1,9 @@
-import dataModel from "../model/dataModel.js";
+import dataModel from "../model/dishModel.js";
 
 export const postData = async (req, res) => {
-  const { title, img, price, desc } = req.body;
+  const { title, img, price, desc, category } = req.body;
 
-  if (!title || !img || !price || !desc) {
+  if (!title || !img || !price || !desc || !category) {
     return res.status(400).json({
       message: "Body can't be empty!",
     });
@@ -14,6 +14,7 @@ export const postData = async (req, res) => {
       price,
       img,
       desc,
+      category,
     });
     return res.json({
       result: createData,

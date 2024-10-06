@@ -5,8 +5,9 @@ import helmet from "helmet";
 import morgan from "morgan";
 import ExpressMongoSanitize from "express-mongo-sanitize";
 import user from "./routes/user.js";
-import data from "./routes/data.js";
+import dish from "./routes/dish.js";
 import connectDB from "./middlewares/connectDB.js";
+import restaurant from "./routes/restaurant.js";
 
 const app = express();
 
@@ -24,7 +25,9 @@ app.use(bodyParser.json({ limit: "50mb" }));
 app.use(bodyParser.urlencoded({ extended: true, limit: "50mb" }));
 
 app.use("/user", user);
-app.use("/data", data);
+app.use("/dish", dish);
+app.use("/restaurant", restaurant);
+app.use("/review", dish);
 
 app.use((req, res) => {
   return res.status(400).json({ message: "Invalid endpoints" });

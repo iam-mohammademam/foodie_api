@@ -10,6 +10,10 @@ const modal = new mongoose.Schema(
       type: String,
       required: true,
     },
+    category: {
+      type: String,
+      required: true,
+    },
     price: {
       type: Number,
       required: true,
@@ -17,9 +21,13 @@ const modal = new mongoose.Schema(
     img: {
       type: String,
     },
+    reviews: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Review",
+    },
   },
   { timestamps: true }
 );
 
-const dataModel = new mongoose.model("data", modal);
-export default dataModel;
+const dishModel = new mongoose.model("dish", modal);
+export default dishModel;
