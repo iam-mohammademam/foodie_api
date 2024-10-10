@@ -8,6 +8,7 @@ import user from "./routes/user.js";
 import dish from "./routes/dish.js";
 import connectDB from "./middlewares/connectDB.js";
 import restaurant from "./routes/restaurant.js";
+import nodemailer from "./middlewares/nodemailer.js";
 
 const app = express();
 
@@ -32,6 +33,6 @@ app.use("/review", dish);
 app.use((req, res) => {
   return res.status(400).json({ message: "Invalid endpoints" });
 });
-
+// nodemailer();
 connectDB();
 app.listen(4000, () => console.log("Server is running.."));

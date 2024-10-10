@@ -31,7 +31,9 @@ export const register = async (req, res) => {
       result: createUser,
     });
   } catch (error) {
-    console.log(error?.message);
+    return res.status(500).json({
+      message: "Internal server error.",
+    });
   }
 };
 export const login = async (req, res) => {
@@ -59,7 +61,34 @@ export const login = async (req, res) => {
       result: findUser,
     });
   } catch (error) {
-    console.log(error?.message);
+    return res.status(500).json({
+      message: "Internal server error.",
+    });
+  }
+};
+export const verifyUser = async (req, res) => {
+  const { email, id } = req.body;
+
+  if (!email || !id) {
+    return res.status(400).json({
+      message: "Invalid request parameters.",
+    });
+  }
+  try {
+    const findUser = await userModel.findOne({ email });
+    if (!findUser) {
+      return res.status(404).json({
+        message: "No account found.",
+      });
+    }
+
+    return res.json({
+      message: "your account is verified.",
+    });
+  } catch (error) {
+    return res.status(500).json({
+      message: "Internal server error.",
+    });
   }
 };
 export const deleteUser = async (req, res) => {
@@ -88,6 +117,8 @@ export const deleteUser = async (req, res) => {
       message: "Deleted.",
     });
   } catch (error) {
-    console.log(error?.message);
+    return res.status(500).json({
+      message: "Internal server error.",
+    });
   }
 };
