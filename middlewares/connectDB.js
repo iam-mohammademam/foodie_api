@@ -1,19 +1,23 @@
 import mongoose from "mongoose";
 import { db_url } from "./variables.js";
 
+/**
+ * Connects to the MongoDB database.
+ * @returns {Promise<void>} Resolves if the connection is successful, otherwise logs the error and exits the process.
+ */
 const connectDB = async () => {
-  if (!db_url) {
-    return console.log("undefined database url.");
-  }
-
   try {
-    await mongoose.connect(db_url, {
-      dbName: "foodie",
-    });
-    return console.log("connected to  database");
+    if (!db_url) {
+      throw new Error("Database URL is not defined.");
+    }
+
+    await mongoose.connect(db_url, { dbName: "foodie" });
+
+    console.log("✅ Connected to the database successfully.");
   } catch (error) {
-    console.log(error?.message || "couldn't connect to the database.");
-    process.exit(1);
+    console.error(`❌ Database connection failed: ${error.message}`);
+    process.exit(1); // Exit the process on failure
   }
 };
+
 export default connectDB;
