@@ -1,4 +1,4 @@
-import userModel from "../model/userModel.js";
+import userModel from "../models/userModel.js";
 import { handleError, validateFields } from "../utils/utils.js";
 
 export const registerUser = async (req, res) => {

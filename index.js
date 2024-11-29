@@ -5,10 +5,10 @@ import helmet from "helmet";
 import morgan from "morgan";
 import mongoSanitize from "express-mongo-sanitize";
 import dotenv from "dotenv";
-
+// Import routes and middlewares
 import connectDB from "./middlewares/connectDB.js";
 import userRoutes from "./routes/user.js";
-
+import merchantRoutes from "./routes/merchant.js";
 // Load environment variables
 dotenv.config();
 
@@ -32,7 +32,7 @@ const configureMiddlewares = (app) => {
 // Route Configuration
 const configureRoutes = (app) => {
   app.use("/user", userRoutes);
-
+  app.use("/merchant", merchantRoutes);
   // Handle invalid routes
   app.use((req, res) => {
     res.status(404).json({ message: "Invalid endpoint" });
