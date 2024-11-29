@@ -117,3 +117,28 @@ export const updateUser = async (req, res) => {
     return handleError(res, error.message || "Failed to update user.");
   }
 };
+export const deleteUser = async (req, res) => {
+  const { password } = req.body;
+  const { id } = req.query;
+  const token = req.headers.authorization?.replace("Bearer ", "");
+
+  if (!token || !id || !password) {
+    return validateFields({ token, id, password }, res);
+  }
+
+  try {
+    const user = await userModel.findById(id).select("+password");
+    if (!user) {
+      return handleError(res, "User not found.", 404);
+    }
+
+    await user.verifyAuthToken(token);
+    await user.validatePassword(password);
+    await user.deleteUser();
+
+    return res.status(200).json({ message: "User deleted successfully." });
+  } catch (error) {
+    console.error("Delete Error:", error);
+    return handleError(res, error.message || "Failed to delete user.");
+  }
+};

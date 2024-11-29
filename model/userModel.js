@@ -57,18 +57,6 @@ const userSchema = new Schema(
   { timestamps: true }
 );
 
-// // Hash password before saving the user
-// userSchema.pre("save", async function (next) {
-//   if (!this.isModified("password")) return next();
-
-//   try {
-//     const salt = await bcrypt.genSalt(10); // Use a constant salt rounds value
-//     this.password = await bcrypt.hash(this.password, salt);
-//     next();
-//   } catch (error) {
-//     next(error);
-//   }
-// });
 userSchema.methods.hashPassword = async function (password) {
   const salt = await bcrypt.genSalt(10); // Use a constant salt rounds value
   this.password = await bcrypt.hash(password, salt);
@@ -128,6 +116,10 @@ userSchema.methods.validatePassword = async function (password) {
 userSchema.methods.logout = async function (token) {
   this.tokens = this.tokens.filter((t) => t.token !== token);
   await this.save();
+};
+// Delete user
+userSchema.methods.deleteUser = async function (id) {
+  await this.deleteOne();
 };
 
 export default model("User", userSchema);
