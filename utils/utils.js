@@ -1,10 +1,11 @@
 import { Schema } from "mongoose";
 import { jwtSecret } from "../middlewares/variables.js";
 import jwt from "jsonwebtoken";
-export const handleError = (res, message, status = 500) => {
+
+export const handleStatus = (res, message, status = 500) => {
   return res.status(status).json({ message });
 };
-
+// validate fields
 export const validateFields = (fields, res) => {
   for (const [key, value] of Object.entries(fields)) {
     if (!value) {
@@ -61,7 +62,6 @@ export const getQueryObject = ({
 
   return query;
 };
-
 // Function to generate auth token
 export const tokenSchema = new Schema(
   {
@@ -74,7 +74,7 @@ export const tokenSchema = new Schema(
 );
 export const generateAuthToken = async (user) => {
   try {
-    const token = jwt.sign({ id: user._id, isAdmin: user.isAdmin }, jwtSecret, {
+    const token = jwt.sign({ id: user._id }, jwtSecret, {
       expiresIn: "7d",
     });
     // Optionally add the token to the user's token list (if you want to store tokens)
@@ -103,4 +103,7 @@ export const verifyAuthToken = async (token, user) => {
   } catch (error) {
     throw new Error("Invalid or expired token");
   }
+};
+export const generateOtp = () => {
+  return Math.floor(100000 + Math.random() * 900000); // Generates a number between 100000 and 999999
 };

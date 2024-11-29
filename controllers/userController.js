@@ -1,56 +1,66 @@
 import userModel from "../models/userModel.js";
-import { handleError, validateFields } from "../utils/utils.js";
+import {
+  generateAuthToken,
+  handleLogout,
+  hashPassword,
+  updateAddress,
+  updatePassword,
+  validatePassword,
+  verifyAuthToken,
+} from "../utils/handleSchema.js";
+import { handleStatus, validateFields } from "../utils/utils.js";
 
 export const registerUser = async (req, res) => {
   const { name, email, password } = req.body;
 
   // Validate required fields
-  const isValid = validateFields({ name, email, password }, res);
-  if (isValid !== true) return;
+  if (!name || !email || !password) {
+    return validateFields({ name, email, password }, res);
+  }
 
   try {
     const existingUser = await userModel.findOne({ email });
     if (existingUser) {
-      return handleError(res, "User with this email already exists.", 400);
+      return handleStatus(res, "User with this email already exists.", 400);
     }
 
     const user = new userModel({ name, email, password });
-    await user.hashPassword(password);
-    await user.save();
+    await hashPassword(password, user);
 
-    await user.generateAuthToken();
+    await user.save();
+    await generateAuthToken(user);
+
     const userToReturn = user.toObject();
     delete userToReturn.password;
 
     return res.status(201).json({ user: userToReturn });
   } catch (error) {
     console.error("Register Error:", error);
-    return handleError(res, error.message || "Failed to register user.");
+    return handleStatus(res, error.message || "Failed to register user.");
   }
 };
 
 export const loginUser = async (req, res) => {
   const { email, password } = req.body;
-
-  const isValid = validateFields({ email, password }, res);
-  if (isValid !== true) return;
+  if (!email || !password) {
+    return validateFields({ email, password }, res);
+  }
 
   try {
-    const user = await userModel.findOne({ email }).select("+password");
-    if (!user) {
-      return handleError(res, "No account found for this email.", 404);
+    const findUser = await userModel.findOne({ email }).select("+password");
+    if (!findUser) {
+      return handleStatus(res, "No account found for this email.", 404);
     }
-
-    await user.validatePassword(password);
-
-    await user.generateAuthToken();
-    const userToReturn = user.toObject();
+    await validatePassword(password, findUser);
+    await generateAuthToken(findUser);
+    // exlude password from response
+    const userToReturn = findUser.toObject();
     delete userToReturn.password;
 
-    return res.status(200).json({ user: userToReturn });
+    return res.status(200).json({ results: userToReturn });
   } catch (error) {
     console.error("Login Error:", error);
-    return handleError(res, error.message || "Failed to login.");
+    return handleStatus(res, error.message || "Failed to login.");
   }
 };
 
@@ -58,25 +68,34 @@ export const logoutUser = async (req, res) => {
   const token = req.headers.authorization?.replace("Bearer ", "");
 
   if (!token) {
-    return handleError(res, "Token is required.", 400);
+    return handleStatus(res, "Token is required.", 400);
   }
 
   try {
     const user = await userModel.findOne({ "tokens.token": token });
     if (!user) {
-      return handleError(res, "User not found.", 404);
+      return handleStatus(res, "User not found.", 404);
     }
 
-    await user.logout(token);
-    return res.status(200).json({ message: "Successfully logged out." });
+    await handleLogout(token, user);
+    return handleStatus(res, "Successfully logged out.", 200);
   } catch (error) {
     console.error("Logout Error:", error);
-    return handleError(res, error.message || "Failed to logout.");
+    return handleStatus(res, error.message || "Failed to logout.");
   }
 };
-
 export const updateUser = async (req, res) => {
-  const { name, address, phone, password, newPassword } = req.body;
+  const {
+    name,
+    state,
+    street,
+    city,
+    postalCode,
+    country,
+    phone,
+    password,
+    newPassword,
+  } = req.body;
   const { id } = req.query;
   const token = req.headers.authorization?.replace("Bearer ", "");
 
@@ -84,37 +103,55 @@ export const updateUser = async (req, res) => {
     return validateFields({ token, id, password }, res);
   }
 
-  if (!name && !address && !newPassword && !phone) {
-    return handleError(res, "No fields provided to update.", 400);
+  // Ensure there's something to update
+  const fieldsToUpdate = {
+    name,
+    state,
+    street,
+    city,
+    postalCode,
+    country,
+    phone,
+    newPassword,
+  };
+  const hasFieldsToUpdate = Object.values(fieldsToUpdate).some(
+    (value) => value != null
+  );
+
+  if (!hasFieldsToUpdate) {
+    return handleStatus(res, "No fields provided to update.", 400);
   }
 
   try {
-    const user = await userModel.findById(id).select("+password");
-    if (!user) {
-      return handleError(res, "User not found.", 404);
+    const findUser = await userModel.findById(id).select("+password");
+    if (!findUser) {
+      return handleStatus(res, "User not found.", 404);
     }
 
-    await user.verifyAuthToken(token);
+    await verifyAuthToken(token, findUser);
+    await validatePassword(password, findUser);
 
-    await user.validatePassword(password);
+    if (newPassword) await updatePassword(newPassword, findUser);
+    if (state || street || city || postalCode || country) {
+      await updateAddress(
+        { state, street, city, postalCode, country },
+        findUser
+      );
+    }
+    if (name) findUser.name = name;
+    if (phone) findUser.phone = phone;
 
-    if (newPassword) await user.updatePassword(password, newPassword);
+    await findUser.save();
 
-    if (name) user.name = name;
-    if (address) user.address = address;
-
-    await user.save();
-
-    const updatedUser = user.toObject();
+    const updatedUser = findUser.toObject();
     delete updatedUser.password;
 
     return res.status(200).json({
-      message: "User updated successfully.",
       user: updatedUser,
     });
   } catch (error) {
     console.error("Update Error:", error);
-    return handleError(res, error.message || "Failed to update user.");
+    return handleStatus(res, error.message || "Failed to update user.");
   }
 };
 export const deleteUser = async (req, res) => {
@@ -127,18 +164,17 @@ export const deleteUser = async (req, res) => {
   }
 
   try {
-    const user = await userModel.findById(id).select("+password");
-    if (!user) {
-      return handleError(res, "User not found.", 404);
+    const findUser = await userModel.findById(id).select("+password");
+    if (!findUser) {
+      return handleStatus(res, "User not found.", 404);
     }
-
-    await user.verifyAuthToken(token);
-    await user.validatePassword(password);
-    await user.deleteUser();
+    await verifyAuthToken(token, findUser);
+    await validatePassword(password, findUser);
+    await findUser.deleteUser();
 
     return res.status(200).json({ message: "User deleted successfully." });
   } catch (error) {
     console.error("Delete Error:", error);
-    return handleError(res, error.message || "Failed to delete user.");
+    return handleStatus(res, error.message || "Failed to delete user.");
   }
 };

@@ -75,7 +75,12 @@ const merchantSchema = new Schema(
       max: [5, "Rating cannot exceed 5"],
     },
     tokens: [tokenSchema],
+    verificationCode: {
+      code: { type: String }, // OTP code
+      expiresAt: { type: Date }, // Expiry time for the OTP
+    },
     isVerified: { type: Boolean, default: false },
+    role: { type: String, default: "merchant" },
     isActive: { type: Boolean, default: true },
   },
   { timestamps: true }
@@ -83,7 +88,6 @@ const merchantSchema = new Schema(
 
 // Indexes for performance
 merchantSchema.index({ name: "text", cuisineString: "text" });
-
 // Hook to preprocess cuisineTypes
 merchantSchema.pre("save", async function (next) {
   // Preprocess cuisineTypes into a single string
@@ -92,11 +96,18 @@ merchantSchema.pre("save", async function (next) {
   }
   next();
 });
-
 // Hash password method
 merchantSchema.methods.hashPassword = async function (password) {
   const salt = await bcrypt.genSalt(10); // Use a constant salt rounds value
   this.password = await bcrypt.hash(password, salt);
+};
+// add verification code
+merchantSchema.methods.addVerificationCode = async function (otp) {
+  this.verificationCode = {
+    code: otp,
+    expiresAt: new Date(Date.now() + 5 * 60 * 1000),
+  };
+  await this.save();
 };
 // Method to generate auth token
 merchantSchema.methods.generateAuthToken = async function () {

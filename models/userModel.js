@@ -1,10 +1,6 @@
 import { Schema, model } from "mongoose";
-import bcrypt from "bcryptjs"; // Use a simpler import name
-import {
-  generateAuthToken,
-  tokenSchema,
-  verifyAuthToken,
-} from "../utils/utils.js";
+import { tokenSchema } from "../utils/utils.js";
+import { addressSchema } from "./globalSchema.js";
 
 const userSchema = new Schema(
   {
@@ -39,59 +35,16 @@ const userSchema = new Schema(
         message: "Phone number must be between 10-15 digits",
       },
     },
-    address: {
-      type: String,
-      // required: [true, "Address is required"],
-      trim: true,
-    },
-    isAdmin: {
-      type: Boolean,
-      default: false,
-    },
+    address: { type: addressSchema },
+    role: { type: String, default: "user" },
     tokens: [tokenSchema],
+    isVerified: { type: Boolean, default: false },
   },
   { timestamps: true }
 );
 
-userSchema.methods.hashPassword = async function (password) {
-  const salt = await bcrypt.genSalt(10); // Use a constant salt rounds value
-  this.password = await bcrypt.hash(password, salt);
-};
-// Method to update password
-userSchema.methods.updatePassword = async function (
-  currentPassword,
-  newPassword
-) {
-  // Ensure new password is not empty
-  if (!newPassword) {
-    throw new Error("New password is required");
-  }
-  await this.validatePassword(currentPassword);
-  await this.hashPassword(newPassword);
-};
-// Method to generate auth token
-userSchema.methods.generateAuthToken = async function () {
-  return await generateAuthToken(this);
-};
-// Method to verify auth token
-userSchema.methods.verifyAuthToken = async function (token) {
-  await verifyAuthToken(token, this);
-};
-// Method to validate password
-userSchema.methods.validatePassword = async function (password) {
-  const isPasswordValid = await bcrypt.compare(password, this.password);
-
-  if (!isPasswordValid) {
-    throw new Error("Invalid password");
-  }
-};
-// Clean up tokens after logout
-userSchema.methods.logout = async function (token) {
-  this.tokens = this.tokens.filter((t) => t.token !== token);
-  await this.save();
-};
 // Delete user
-userSchema.methods.deleteUser = async function (id) {
+userSchema.methods.deleteUser = async function () {
   await this.deleteOne();
 };
 
