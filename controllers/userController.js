@@ -43,11 +43,11 @@ export const loginUser = async (req, res) => {
 
     await user.validatePassword(password);
 
-    const token = await user.generateAuthToken();
+    await user.generateAuthToken();
     const userToReturn = user.toObject();
     delete userToReturn.password;
 
-    return res.status(200).json({ user: userToReturn, token });
+    return res.status(200).json({ user: userToReturn });
   } catch (error) {
     console.error("Login Error:", error);
     return handleError(res, error.message || "Failed to login.");

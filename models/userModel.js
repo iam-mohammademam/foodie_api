@@ -1,7 +1,10 @@
 import { Schema, model } from "mongoose";
 import bcrypt from "bcryptjs"; // Use a simpler import name
-import jwt from "jsonwebtoken";
-import { jwtSecret } from "../middlewares/variables.js";
+import {
+  generateAuthToken,
+  tokenSchema,
+  verifyAuthToken,
+} from "../utils/utils.js";
 
 const userSchema = new Schema(
   {
@@ -45,14 +48,7 @@ const userSchema = new Schema(
       type: Boolean,
       default: false,
     },
-    tokens: [
-      {
-        token: {
-          type: String,
-          required: true,
-        },
-      },
-    ],
+    tokens: [tokenSchema],
   },
   { timestamps: true }
 );
@@ -75,34 +71,11 @@ userSchema.methods.updatePassword = async function (
 };
 // Method to generate auth token
 userSchema.methods.generateAuthToken = async function () {
-  try {
-    const token = jwt.sign({ id: this._id, isAdmin: this.isAdmin }, jwtSecret, {
-      expiresIn: "7d",
-    });
-    this.tokens.push({ token });
-    await this.save();
-    return token;
-  } catch (error) {
-    throw new Error("Token generation failed");
-  }
+  return await generateAuthToken(this);
 };
 // Method to verify auth token
 userSchema.methods.verifyAuthToken = async function (token) {
-  try {
-    // Verify the JWT token
-    const decoded = jwt.verify(token, jwtSecret);
-
-    // Check if the token exists in the user's tokens array
-    const tokenExists = this.tokens.some((t) => t.token === token);
-    if (!tokenExists) {
-      throw new Error("Token not found in user's tokens list");
-    }
-
-    // Return decoded data if the token is valid
-    return decoded;
-  } catch (error) {
-    throw new Error("Invalid or expired token");
-  }
+  await verifyAuthToken(token, this);
 };
 // Method to validate password
 userSchema.methods.validatePassword = async function (password) {

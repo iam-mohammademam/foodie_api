@@ -1,9 +1,12 @@
-import merchant from "../models/merchantModel.js";
+import merchantModel from "../models/merchantModel.js";
 import userModel from "../models/userModel.js";
-import { handleError, validateFields } from "../utils/utils.js";
-// Adjust the path as per your project structure
+import {
+  getQueryObject,
+  getSelectFields,
+  handleError,
+  validateFields,
+} from "../utils/utils.js";
 
-// Register Function
 export const registerMerchant = async (req, res) => {
   const {
     name,
@@ -32,7 +35,7 @@ export const registerMerchant = async (req, res) => {
   }
   try {
     // Check if email or phone already exists
-    const existingMerchant = await merchant.findOne({
+    const existingMerchant = await merchantModel.findOne({
       $or: [{ email }, { phone }],
     });
     const existingUser = await userModel.findOne({
@@ -41,8 +44,8 @@ export const registerMerchant = async (req, res) => {
     if (existingMerchant || existingUser) {
       return handleError(res, "Email or phone already in use", 409);
     }
-    // Create merchant
-    const newMerchant = new merchant({
+    // Create merchantModel
+    const newMerchant = new merchantModel({
       name,
       email,
       phone,
@@ -52,7 +55,8 @@ export const registerMerchant = async (req, res) => {
       banner,
       schedule,
     });
-    // Hash the password
+
+    await newMerchant.generateAuthToken();
     await newMerchant.hashPassword(password);
     await newMerchant.verifyMerchant();
     await newMerchant.save();
@@ -61,20 +65,84 @@ export const registerMerchant = async (req, res) => {
     delete dataToReturn.password;
     // Return success response
     return res.status(201).json({
-      merchant: dataToReturn,
+      merchantModel: dataToReturn,
     });
   } catch (error) {
-    console.error("Error registering merchant:", error.message);
+    console.error("Error registering merchantModel:", error.message);
     return handleError(res, error.message || "Internal server error");
   }
 };
-export const getAllMerchants = async (req, res) => {
+export const loginMerchant = async (req, res) => {
+  const { email, password } = req.body;
+  if (!email || !password) {
+    return validateFields({ email, password }, res);
+  }
+  const fields = getSelectFields(req.query.fields);
+  try {
+    const findMerchant = await merchantModel
+      .findOne({ email })
+      .select(`password tokens ${fields}`);
+    if (!findMerchant) {
+      return handleError(res, "No account found for this email.", 404);
+    }
+
+    await findMerchant.validatePassword(password);
+    await findMerchant.generateAuthToken();
+    const dataToReturn = findMerchant.toObject();
+    delete dataToReturn.password;
+
+    return res.status(200).json({ results: dataToReturn });
+  } catch (error) {
+    console.error("Login Error:", error);
+    return handleError(res, error.message || "Failed to login.");
+  }
+};
+export const updateMerchant = async (req, res) => {
+  const { id } = req.params;
+  const { name, address, phone, password, newPassword } = req.body;
+  const { token } = req.headers;
+
+  if (!token) {
+    return validateFields({ token }, res);
+  }
+
+  try {
+    const findMerchant = await merchantModel.findById(id);
+    if (!findMerchant) {
+      return handleError(res, "Merchant not found.", 404);
+    }
+
+    await findMerchant.verifyAuthToken(token);
+
+    await findMerchant.validatePassword(password);
+
+    if (newPassword) await findMerchant.updatePassword(password, newPassword);
+
+    if (name) findMerchant.name = name;
+    if (address) findMerchant.address = address;
+
+    await findMerchant.save();
+
+    const updatedMerchant = findMerchant.toObject();
+    delete updatedMerchant.password;
+
+    return res.status(200).json({
+      message: "Merchant updated successfully.",
+      merchantModel: updatedMerchant,
+    });
+  } catch (error) {
+    console.error("Update Error:", error);
+    return handleError(res, error.message || "Failed to update merchantModel.");
+  }
+};
+export const getMerchants = async (req, res) => {
   try {
     const {
       page = 1,
       limit = 10,
       sortBy = "name",
       sortOrder = "asc",
+      name,
       cuisineType,
       minRating = 0,
       maxRating = 5,
@@ -84,33 +152,21 @@ export const getAllMerchants = async (req, res) => {
     } = req.query; // Destructure parameters from query string
 
     // Build query object dynamically
-    const query = {};
-
-    // Filter by cuisineType if provided
-    if (cuisineType) {
-      const cuisineTypesArray = cuisineType.includes(",")
-        ? cuisineType.split(",").map((type) => type.trim().toLowerCase())
-        : [cuisineType.trim().toLowerCase()];
-      query.$text = { $search: cuisineTypesArray.join(" ") }; // Filter merchants with matching cuisine types
-    }
-
-    // Filter by rating range
-    query.rating = { $gte: minRating, $lte: maxRating };
-
-    // Filter by active/verified status
-    if (isActive !== undefined) query.isActive = isActive === "true";
-    if (isVerified !== undefined) query.isVerified = isVerified === "true";
+    const query = getQueryObject({
+      cuisineType,
+      name,
+      minRating,
+      maxRating,
+      isActive,
+      isVerified,
+    });
 
     // Sorting direction
     const sortDirection = sortOrder === "desc" ? -1 : 1;
     // Select fields
-    const defaultFields = "_id name cuisineTypes banner schedule";
-    const selectFields = fields
-      ? `${defaultFields} ${fields.split(",").join(" ")}` // If fields are provided, concatenate with defaults
-      : defaultFields; // If no fields are provided, just use the defaults
-
+    const selectFields = getSelectFields(fields);
     // Paginate, sort, and apply the filters
-    const merchants = await merchant
+    const merchants = await merchantModel
       .find(query)
       .select(selectFields) // Field selection (optional)
       .sort({ [sortBy]: sortDirection }) // Dynamic sorting
@@ -121,11 +177,11 @@ export const getAllMerchants = async (req, res) => {
       return handleError(res, "No merchants found.", 404);
     }
     // Get the total count of merchants for pagination
-    const totalMerchants = await merchant.countDocuments(query);
+    const totalMerchants = await merchantModel.countDocuments(query);
 
     // Return the result with pagination metadata
     return res.status(200).json({
-      data: merchants,
+      results: merchants,
       totalItems: totalMerchants,
       totalPages: Math.ceil(totalMerchants / limit),
       currentPage: parseInt(page),
@@ -133,6 +189,20 @@ export const getAllMerchants = async (req, res) => {
     });
   } catch (error) {
     console.error("Error fetching merchants:", error);
+    return handleError(res, error.message || "Internal server error");
+  }
+};
+export const getMerchantById = async (req, res) => {
+  const { id } = req.params;
+  const fields = getSelectFields(req.query.fields);
+  try {
+    const findMerchant = await merchantModel.findById(id).select(fields);
+    if (!findMerchant) {
+      return handleError(res, "Merchant not found.", 404);
+    }
+    return res.status(200).json({ results: findMerchant });
+  } catch (error) {
+    console.error("Error fetching merchantModel:", error);
     return handleError(res, error.message || "Internal server error");
   }
 };

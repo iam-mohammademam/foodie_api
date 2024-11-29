@@ -1,5 +1,10 @@
 import { Schema, model } from "mongoose";
 import bcrypt from "bcryptjs";
+import {
+  generateAuthToken,
+  tokenSchema,
+  verifyAuthToken,
+} from "../utils/utils.js";
 
 // Address Schema for reusability
 const addressSchema = new Schema(
@@ -69,6 +74,7 @@ const merchantSchema = new Schema(
       min: [0, "Rating cannot be less than 0"],
       max: [5, "Rating cannot exceed 5"],
     },
+    tokens: [tokenSchema],
     isVerified: { type: Boolean, default: false },
     isActive: { type: Boolean, default: true },
   },
@@ -92,21 +98,21 @@ merchantSchema.methods.hashPassword = async function (password) {
   const salt = await bcrypt.genSalt(10); // Use a constant salt rounds value
   this.password = await bcrypt.hash(password, salt);
 };
-
-// Static Method to find by email
-merchantSchema.statics.findByEmail = async function (email) {
-  return this.findOne({ email });
+// Method to generate auth token
+merchantSchema.methods.generateAuthToken = async function () {
+  return await generateAuthToken(this);
 };
-
-// Instance Method to verify a merchant
-merchantSchema.methods.verifyMerchant = async function () {
-  this.isVerified = true;
-  return this.save();
+// Method to verify auth token
+merchantSchema.methods.verifyAuthToken = async function (token) {
+  await verifyAuthToken(token, this);
 };
-
 // Instance Method to validate a password
 merchantSchema.methods.validatePassword = async function (password) {
-  return bcrypt.compare(password, this.password);
+  const isPasswordValid = await bcrypt.compare(password, this.password);
+
+  if (!isPasswordValid) {
+    throw new Error("Invalid password");
+  }
 };
 
 // Exporting the Model
