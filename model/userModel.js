@@ -38,7 +38,7 @@ const userSchema = new Schema(
     },
     address: {
       type: String,
-      required: [true, "Address is required"],
+      // required: [true, "Address is required"],
       trim: true,
     },
     isAdmin: {
@@ -57,41 +57,33 @@ const userSchema = new Schema(
   { timestamps: true }
 );
 
-// Hash password before saving the user
-userSchema.pre("save", async function (next) {
-  if (!this.isModified("password")) return next();
+// // Hash password before saving the user
+// userSchema.pre("save", async function (next) {
+//   if (!this.isModified("password")) return next();
 
-  try {
-    const salt = await bcrypt.genSalt(10); // Use a constant salt rounds value
-    this.password = await bcrypt.hash(this.password, salt);
-    next();
-  } catch (error) {
-    next(error);
-  }
-});
+//   try {
+//     const salt = await bcrypt.genSalt(10); // Use a constant salt rounds value
+//     this.password = await bcrypt.hash(this.password, salt);
+//     next();
+//   } catch (error) {
+//     next(error);
+//   }
+// });
+userSchema.methods.hashPassword = async function (password) {
+  const salt = await bcrypt.genSalt(10); // Use a constant salt rounds value
+  this.password = await bcrypt.hash(password, salt);
+};
 // Method to update password
 userSchema.methods.updatePassword = async function (
   currentPassword,
   newPassword
 ) {
-  // Validate the current password
-  const isPasswordValid = await this.validatePassword(currentPassword);
-  if (!isPasswordValid) {
-    throw new Error("Current password is incorrect");
-  }
-
   // Ensure new password is not empty
   if (!newPassword) {
     throw new Error("New password is required");
   }
-
-  // Hash the new password before saving
-  const salt = await bcrypt.genSalt(10);
-  this.password = await bcrypt.hash(newPassword, salt);
-
-  // Save the updated user data
-  await this.save();
-  return true;
+  await this.validatePassword(currentPassword);
+  await this.hashPassword(newPassword);
 };
 // Method to generate auth token
 userSchema.methods.generateAuthToken = async function () {

@@ -1,175 +1,119 @@
-// Adjust the path as per your project structure
-
 import userModel from "../model/userModel.js";
+import { handleError, validateFields } from "../utils/utils.js";
 
 export const registerUser = async (req, res) => {
-  const { name, email, password, phone, address } = req.body;
+  const { name, email, password } = req.body;
 
   // Validate required fields
-  if (!name || !email || !password || !address) {
-    return res.status(400).json({
-      message:
-        "All required fields (name, email, password, address) must be provided.",
-    });
-  }
+  const isValid = validateFields({ name, email, password }, res);
+  if (isValid !== true) return;
 
   try {
-    // Check if the user already exists
     const existingUser = await userModel.findOne({ email });
     if (existingUser) {
-      return res.status(400).json({
-        message: "User with this email already exists.",
-      });
+      return handleError(res, "User with this email already exists.", 400);
     }
 
-    // Create a new user instance
-    const user = new userModel({
-      name,
-      email,
-      password,
-      phone,
-      address,
-    });
-
-    // Save the user to the database
+    const user = new userModel({ name, email, password });
+    await user.hashPassword(password);
     await user.save();
-    // Generate an authentication token
-    await user.generateAuthToken();
-    // Return the newly created user (without the password) and the token
-    const userToReturn = user.toObject();
-    delete userToReturn.password; // Ensure password is not included
-
-    return res.status(201).json({ user: userToReturn });
-  } catch (error) {
-    console.error(error.message);
-    return res.status(500).json({
-      message: error.message || "Failed to register user. Please try again.",
-    });
-  }
-};
-export const loginUser = async (req, res) => {
-  const { email, password } = req.body;
-
-  // Validate required fields
-  if (!email || !password) {
-    return res.status(400).json({
-      message: "Email and password must be provided.",
-    });
-  }
-
-  try {
-    // Find the user by email
-    const user = await userModel.findOne({ email }).select("+password");
-    if (!user) {
-      return res.status(404).json({
-        message: "No account found for this email.",
-      });
-    }
-
-    // Validate the password
-    await user.validatePassword(password);
 
     await user.generateAuthToken();
-
-    // Return the logged-in user (without the password) and the token
     const userToReturn = user.toObject();
     delete userToReturn.password;
 
-    // Send the response back to the client
-    return res.status(200).json({ user: userToReturn });
+    return res.status(201).json({ user: userToReturn });
   } catch (error) {
-    console.error(error.message);
-    return res.status(500).json({
-      message: error.message || "Failed to login. Please try again.",
-    });
+    console.error("Register Error:", error);
+    return handleError(res, error.message || "Failed to register user.");
   }
 };
+
+export const loginUser = async (req, res) => {
+  const { email, password } = req.body;
+
+  const isValid = validateFields({ email, password }, res);
+  if (isValid !== true) return;
+
+  try {
+    const user = await userModel.findOne({ email }).select("+password");
+    if (!user) {
+      return handleError(res, "No account found for this email.", 404);
+    }
+
+    await user.validatePassword(password);
+
+    const token = await user.generateAuthToken();
+    const userToReturn = user.toObject();
+    delete userToReturn.password;
+
+    return res.status(200).json({ user: userToReturn, token });
+  } catch (error) {
+    console.error("Login Error:", error);
+    return handleError(res, error.message || "Failed to login.");
+  }
+};
+
 export const logoutUser = async (req, res) => {
-  const { authorization } = req.headers;
-  const token = authorization.replace("Bearer ", "");
+  const token = req.headers.authorization?.replace("Bearer ", "");
+
   if (!token) {
-    return res.status(400).json({
-      message: "Token is required.",
-    });
+    return handleError(res, "Token is required.", 400);
   }
 
   try {
-    // Find the user by token
     const user = await userModel.findOne({ "tokens.token": token });
-
     if (!user) {
-      return res.status(404).json({
-        message: "User not found.",
-      });
+      return handleError(res, "User not found.", 404);
     }
 
-    // Use the logout method defined in the user schema
     await user.logout(token);
-
-    return res.status(200).json({
-      message: "Successfully logged out.",
-    });
+    return res.status(200).json({ message: "Successfully logged out." });
   } catch (error) {
-    console.error(error.message);
-    return res.status(500).json({
-      message: error.message || "Failed to logout. Please try again.",
-    });
+    console.error("Logout Error:", error);
+    return handleError(res, error.message || "Failed to logout.");
   }
 };
+
 export const updateUser = async (req, res) => {
-  const { name, address, password } = req.body;
-  const { id } = req.query; // Assuming the user is identified by a userId from the URL
-  const { authorization } = req.headers;
-  const token = authorization.replace("Bearer ", "");
+  const { name, address, phone, password, newPassword } = req.body;
+  const { id } = req.query;
+  const token = req.headers.authorization?.replace("Bearer ", "");
 
-  if (!token) {
-    return res.status(400).json({
-      message: "Invalid authorization token.",
-    });
+  if (!token || !id || !password) {
+    return validateFields({ token, id, password }, res);
   }
 
-  if (!id) {
-    return res.status(400).json({
-      message: "User ID is required to update.",
-    });
-  }
-  if (!name && !address && !password) {
-    return res.status(400).json({
-      message: "At least one field must be provided to update.",
-    });
+  if (!name && !address && !newPassword && !phone) {
+    return handleError(res, "No fields provided to update.", 400);
   }
 
   try {
-    // Find the user by ID
-    const user = await userModel.findById(id);
-
+    const user = await userModel.findById(id).select("+password");
     if (!user) {
-      return res.status(404).json({
-        message: "User not found.",
-      });
+      return handleError(res, "User not found.", 404);
     }
+
     await user.verifyAuthToken(token);
 
     await user.validatePassword(password);
 
+    if (newPassword) await user.updatePassword(password, newPassword);
+
     if (name) user.name = name;
     if (address) user.address = address;
 
-    // Save the updated user data to the database
     await user.save();
 
-    // Return the updated user (without password)
     const updatedUser = user.toObject();
     delete updatedUser.password;
 
     return res.status(200).json({
-      message: "User updated successfully",
+      message: "User updated successfully.",
       user: updatedUser,
     });
   } catch (error) {
-    console.error(error.message);
-    return res.status(500).json({
-      message: error.message || "Failed to update user. Please try again.",
-    });
+    console.error("Update Error:", error);
+    return handleError(res, error.message || "Failed to update user.");
   }
 };
