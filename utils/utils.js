@@ -1,11 +1,31 @@
-import { Schema } from "mongoose";
-import { jwtSecret } from "../middlewares/variables.js";
-import jwt from "jsonwebtoken";
+// send success/error
+export const handleStatus = (res, status, message = "", results = null) => {
+  // Validate status
+  if (typeof status !== "number") {
+    throw new TypeError("Status must be a number.");
+  }
 
-export const handleStatus = (res, message, status = 500) => {
-  return res.status(status).json({ message });
-};
-// validate fields
+  // Validate message
+  if (message && typeof message !== "string") {
+    throw new TypeError("Message must be a string.");
+  }
+
+  // Validate results
+  if (results !== null && typeof results !== "object") {
+    throw new TypeError("Results must be an object or null.");
+  }
+
+  // Construct the response object
+  const response = {
+    success: status >= 200 && status < 300,
+  };
+
+  if (message) response.message = message;
+  if (results) response.results = results;
+
+  // Send the response
+  res.status(status).json(response);
+}; // validate fields
 export const validateFields = (fields, res) => {
   for (const [key, value] of Object.entries(fields)) {
     if (!value) {
@@ -13,8 +33,7 @@ export const validateFields = (fields, res) => {
     }
   }
   return true;
-};
-// Get select fields based on user input
+}; // Get select fields based on user input
 export const getSelectFields = (
   fields,
   defaultFields = "_id name cuisineTypes banner schedule"
@@ -29,8 +48,7 @@ export const getSelectFields = (
   }
   // If no fields are provided, return the default fields
   return defaultFields;
-};
-// Function to build the dynamic query object for searching
+}; // build the dynamic query object for searching
 export const getQueryObject = ({
   cuisineType,
   name,
@@ -61,49 +79,7 @@ export const getQueryObject = ({
   if (isVerified !== undefined) query.isVerified = isVerified === "true";
 
   return query;
-};
-// Function to generate auth token
-export const tokenSchema = new Schema(
-  {
-    token: {
-      type: String,
-      required: true,
-    },
-  },
-  { _id: false }
-);
-export const generateAuthToken = async (user) => {
-  try {
-    const token = jwt.sign({ id: user._id }, jwtSecret, {
-      expiresIn: "7d",
-    });
-    // Optionally add the token to the user's token list (if you want to store tokens)
-    if (user.tokens) {
-      user.tokens.push({ token });
-      await user.save();
-    }
-    return token;
-  } catch (error) {
-    throw new Error("Token generation failed");
-  }
-};
-export const verifyAuthToken = async (token, user) => {
-  try {
-    // Verify the JWT token
-    const decoded = jwt.verify(token, jwtSecret);
-
-    // Check if the token exists in the user's tokens array
-    const tokenExists = user.tokens.some((t) => t.token === token);
-    if (!tokenExists) {
-      throw new Error("Token not found in user's tokens list");
-    }
-
-    // Return decoded data if the token is valid
-    return decoded;
-  } catch (error) {
-    throw new Error("Invalid or expired token");
-  }
-};
+}; // generate otp
 export const generateOtp = () => {
   return Math.floor(100000 + Math.random() * 900000); // Generates a number between 100000 and 999999
 };

@@ -9,6 +9,7 @@ import dotenv from "dotenv";
 import connectDB from "./middlewares/connectDB.js";
 import userRoutes from "./routes/user.js";
 import merchantRoutes from "./routes/merchant.js";
+import { resendEmail } from "./controllers/resendEmail.js";
 // Load environment variables
 dotenv.config();
 
@@ -32,7 +33,9 @@ const configureMiddlewares = (app) => {
 // Route Configuration
 const configureRoutes = (app) => {
   app.use("/user", userRoutes);
-  app.use("/merchant", merchantRoutes);
+  app.use("/auth/resend-email", resendEmail);
+  // app.use("/merchant", merchantRoutes);
+
   // Handle invalid routes
   app.use((req, res) => {
     res.status(404).json({ message: "Invalid endpoint" });

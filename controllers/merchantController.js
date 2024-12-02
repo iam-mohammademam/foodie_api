@@ -2,6 +2,14 @@ import { nodemailer } from "../middlewares/nodemailer.js";
 import merchantModel from "../models/merchantModel.js";
 import userModel from "../models/userModel.js";
 import {
+  generateAuthToken,
+  hashPassword,
+  verifyOtp,
+  addOtp,
+  validatePassword,
+  verifyAuthToken,
+} from "../utils/handleSchema.js";
+import {
   generateOtp,
   getQueryObject,
   getSelectFields,
@@ -44,11 +52,11 @@ export const registerMerchant = async (req, res) => {
       $or: [{ email }, { phone }],
     });
     if (existingMerchant || existingUser) {
-      return handleStatus(res, "Email or phone already in use", 409);
+      return handleStatus(res, 409, "Email or phone already in use");
     }
     const otp = generateOtp();
     // Create merchantModel
-    const newMerchant = new merchantModel({
+    const merchant = new merchantModel({
       name,
       email,
       phone,
@@ -59,20 +67,23 @@ export const registerMerchant = async (req, res) => {
       schedule,
     });
 
-    await newMerchant.hashPassword(password);
-    await newMerchant.addVerificationCode(otp);
-    await newMerchant.generateAuthToken();
+    await hashPassword(password, merchant);
+    await addOtp(otp, merchant);
+    await merchant.save();
+    await generateAuthToken(merchant);
 
     // Send verification email
     await nodemailer(email, otp);
+
     // Return success response
-    return res.status(201).json({
-      message: "Registration successful. Please verify your email.",
-      token: newMerchant._id,
-    });
+    return handleStatus(res, 201, "Registration successful. Please verify.");
   } catch (error) {
     console.error("Error registering merchantModel:", error.message);
-    return handleStatus(res, error.message || "Internal server error");
+    return handleStatus(
+      res,
+      500,
+      error.message || "Error registering merchant"
+    );
   }
 };
 export const verifyEmail = async (req, res) => {
@@ -84,31 +95,22 @@ export const verifyEmail = async (req, res) => {
   try {
     const merchant = await merchantModel.findById(id);
     if (!merchant) {
-      return handleStatus(res, "Merchant not found", 404);
+      return handleStatus(res, 404, "Merchant not found");
     }
 
-    // Check if OTP exists and matches
-    if (merchant.verificationCode.code !== otp) {
-      return handleStatus(res, "Invalid OTP", 400);
-    }
-
-    // Check if OTP is expired
-    if (new Date() > merchant.verificationCode.expiresAt) {
-      return handleStatus(res, "OTP has expired", 400);
-    }
-
-    // Clear the OTP and mark email as verified
-    merchant.otp = null;
-    merchant.isVerified = true;
+    await verifyOtp(otp, merchant);
     await merchant.save();
 
-    return res.status(200).json({ message: "Email verified successfully" });
+    return handleStatus(res, 200, "Email verified successfully", merchant);
   } catch (error) {
     console.error("Error verifying email:", error.message);
-    return handleStatus(res, error.message || "Internal server error");
+    return handleStatus(
+      res,
+      500,
+      error.message || "Error verifying email merchant"
+    );
   }
 };
-
 export const loginMerchant = async (req, res) => {
   const { email, password } = req.body;
   if (!email || !password) {
@@ -116,84 +118,79 @@ export const loginMerchant = async (req, res) => {
   }
   const fields = getSelectFields(req.query.fields);
   try {
-    const findMerchant = await merchantModel
+    const merchant = await merchantModel
       .findOne({ email })
-      .select(`password tokens ${fields}`);
-    if (!findMerchant) {
-      return handleStatus(res, "No account found for this email.", 404);
+      .select(`_id password tokens ${fields}`);
+    if (!merchant) {
+      return handleStatus(res, 404, "No account found for this email.");
     }
-    // if (!findMerchant.isVerified) {
-    //   return handleStatus(res, "Please verify your email first.", 401);
-    // }
-
-    await findMerchant.validatePassword(password);
-    await findMerchant.generateAuthToken();
-    const dataToReturn = findMerchant.toObject();
+    if (!merchant.isVerified) {
+      return handleStatus(res, 401, "Please verify your email first.");
+    }
+    await validatePassword(password, merchant);
+    await generateAuthToken(merchant);
+    const dataToReturn = merchant.toObject();
     delete dataToReturn.password;
-
-    return res.status(200).json({ results: dataToReturn });
+    return handleStatus(res, 200, "", dataToReturn);
   } catch (error) {
     console.error("Login Error:", error);
-    return handleStatus(res, error.message || "Failed to login.");
+    return handleStatus(res, 500, error.message || "Failed to login merchant");
   }
 };
 export const updateMerchant = async (req, res) => {
-  const { id } = req.params;
+  const { id } = req.query;
   const { name, address, phone, password, newPassword } = req.body;
   const { token } = req.headers;
 
-  if (!token) {
-    return validateFields({ token }, res);
+  if (!token || !id) {
+    return validateFields({ token, id }, res);
   }
 
   try {
-    const findMerchant = await merchantModel.findById(id);
-    if (!findMerchant) {
-      return handleStatus(res, "Merchant not found.", 404);
+    const merchant = await merchantModel.findById(id);
+    if (!merchant) {
+      return handleStatus(res, 404, "Merchant not found.");
     }
 
-    await findMerchant.verifyAuthToken(token);
+    await verifyAuthToken(token, merchant);
+    await validatePassword(password, merchant);
 
-    await findMerchant.validatePassword(password);
+    if (newPassword) await hashPassword(password, merchant);
 
-    if (newPassword) await findMerchant.updatePassword(password, newPassword);
+    if (name) merchant.name = name;
+    if (address) merchant.address = address;
+    if (phone) merchant.phone = phone;
 
-    if (name) findMerchant.name = name;
-    if (address) findMerchant.address = address;
+    await merchant.save();
 
-    await findMerchant.save();
-
-    const updatedMerchant = findMerchant.toObject();
+    const updatedMerchant = merchant.toObject();
     delete updatedMerchant.password;
 
-    return res.status(200).json({
-      message: "Merchant updated successfully.",
-      merchantModel: updatedMerchant,
-    });
+    return handleStatus(res, 200, "", updatedMerchant);
   } catch (error) {
-    console.error("Update Error:", error);
+    console.error("Update merchant Error:", error);
     return handleStatus(
       res,
-      error.message || "Failed to update merchantModel."
+      500,
+      error.message || "Failed to update merchantModel"
     );
   }
 };
 export const getMerchants = async (req, res) => {
+  const {
+    page = 1,
+    limit = 10,
+    sortBy = "name",
+    sortOrder = "asc",
+    name,
+    cuisineType,
+    minRating = 0,
+    maxRating = 5,
+    isActive,
+    isVerified,
+    fields,
+  } = req.query; // Destructure parameters from query string
   try {
-    const {
-      page = 1,
-      limit = 10,
-      sortBy = "name",
-      sortOrder = "asc",
-      name,
-      cuisineType,
-      minRating = 0,
-      maxRating = 5,
-      isActive,
-      isVerified,
-      fields,
-    } = req.query; // Destructure parameters from query string
-
     // Build query object dynamically
     const query = getQueryObject({
       cuisineType,
@@ -216,8 +213,8 @@ export const getMerchants = async (req, res) => {
       .skip((page - 1) * limit) // Skip documents based on page number
       .limit(parseInt(limit)) // Limit to the number of results per page
       .exec();
-    if (merchants.length === 0) {
-      return handleStatus(res, "No merchants found.", 404);
+    if (!merchants) {
+      return handleStatus(res, 404, "No merchant found.");
     }
     // Get the total count of merchants for pagination
     const totalMerchants = await merchantModel.countDocuments(query);
@@ -232,20 +229,20 @@ export const getMerchants = async (req, res) => {
     });
   } catch (error) {
     console.error("Error fetching merchants:", error);
-    return handleStatus(res, error.message || "Internal server error");
+    return handleStatus(res, 500, error.message || "Error fetching merchants.");
   }
 };
 export const getMerchantById = async (req, res) => {
   const { id } = req.params;
   const fields = getSelectFields(req.query.fields);
   try {
-    const findMerchant = await merchantModel.findById(id).select(fields);
-    if (!findMerchant) {
-      return handleStatus(res, "Merchant not found.", 404);
+    const merchant = await merchantModel.findById(id).select(fields).exec();
+    if (!merchant) {
+      return handleStatus(res, 404, "No merchant found.");
     }
-    return res.status(200).json({ results: findMerchant });
+    return handleStatus(res, 200, "", merchant);
   } catch (error) {
-    console.error("Error fetching merchantModel:", error);
-    return handleStatus(res, error.message || "Internal server error");
+    console.error("Error fetching merchant by id.", error);
+    return handleStatus(res, 500, error.message || "Error fetching merchant");
   }
 };

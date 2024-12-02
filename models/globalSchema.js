@@ -1,5 +1,49 @@
 import { Schema } from "mongoose";
 
+export const nameSchema = {
+  type: String,
+  required: true,
+  trim: true,
+  minlength: 3,
+};
+export const passwordSchema = {
+  type: String,
+  required: true,
+  minlength: 6,
+  select: false,
+};
+export const emailSchema = {
+  type: String,
+  required: true,
+  unique: true,
+  lowercase: true,
+  trim: true,
+  validate: {
+    validator: (email) =>
+      /^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/.test(email),
+    message: "Invalid email format",
+  },
+};
+export const phoneSchema = {
+  type: String,
+  validate: {
+    validator: (phone) => /^\d{10,15}$/.test(phone),
+    message: "Phone number must be between 10-15 digits",
+  },
+};
+export const ratingSchema = {
+  type: Number,
+  default: 0,
+  min: [0, "Rating cannot be less than 0"],
+  max: [5, "Rating cannot exceed 5"],
+};
+export const verificationSchema = new Schema(
+  {
+    code: { type: String },
+    expiresAt: { type: Date },
+  },
+  { _id: false }
+);
 export const addressSchema = new Schema(
   {
     street: { type: String },
