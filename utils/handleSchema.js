@@ -54,7 +54,7 @@ export const verifyAuthToken = async (token, data) => {
   } catch (error) {
     throw new Error("Invalid or expired token");
   }
-};
+}; // decode token
 export const decodeToken = async (token) => {
   try {
     const decoded = jwt.verify(token, jwtSecret);
@@ -62,8 +62,7 @@ export const decodeToken = async (token) => {
   } catch (error) {
     throw new Error("Invalid or expired token");
   }
-};
-// delete auth token on logout
+}; // delete auth token on logout
 export const handleLogout = async (token, data) => {
   try {
     data.tokens = data.tokens.filter((t) => t.token !== token);

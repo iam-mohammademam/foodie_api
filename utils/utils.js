@@ -30,7 +30,7 @@ export const handleStatus = (res, status, message = "", results = null) => {
 export const validateFields = (fields, res) => {
   for (const [key, value] of Object.entries(fields)) {
     if (!value) {
-      return handleError(res, `The ${key} field is required.`, 400);
+      return handleStatus(res, 400, `${key} is required.`);
     }
   }
   return true;
@@ -95,7 +95,6 @@ export const checkFields = (fields) => {
 }; // generate random string
 export const generateString = (length = 32) => {
   const bytes = Math.ceil(length / 2); // Half the length since each byte gives 2 hex characters
-
   const string = crypto.randomBytes(bytes).toString("hex").slice(0, length);
   return string;
 };

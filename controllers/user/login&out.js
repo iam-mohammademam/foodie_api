@@ -11,7 +11,7 @@ import {
   validateFields,
 } from "../../utils/utils.js";
 import userModel from "../../models/userModel.js";
-import sendotp from "../../utils/sendOtp.js";
+import sendOtp from "../../utils/sendOtp.js";
 
 export const login = async (req, res) => {
   const { email, password } = req.body;
@@ -28,7 +28,7 @@ export const login = async (req, res) => {
       const otp = generateOtp();
       await addOtp(otp, user);
       await user.save();
-      await sendotp(email, otp);
+      await sendOtp(email, otp);
       return handleStatus(res, 401, "Please verify your email first.");
     }
     await validatePassword(password, user);

@@ -15,6 +15,7 @@ export const verifyEmail = async (req, res) => {
     if (!user) {
       return handleStatus(res, 404, "User not found with this token.");
     }
+    // verify otp
     await verifyOtp(otp, user);
     await user.save();
     return handleStatus(res, 200, "Email verified successfully");
