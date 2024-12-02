@@ -1,33 +1,20 @@
-import { createTransport } from "nodemailer";
-import { nodemailerPass, nodemailerUser } from "./variables.js";
+import { transporter } from "../middlewares/nodemailer.js";
 
-export const transporter = createTransport({
-  service: "gmail",
-  auth: {
-    user: nodemailerUser,
-    pass: nodemailerPass,
-  },
-});
-
-export const nodemailer = async (receiverEmail, otp) => {
+const sendOtp = async (receiverEmail, otp) => {
   if (!receiverEmail || !otp) {
     throw new Error("Receiver email & OTP are required");
   }
   try {
     const info = await transporter.sendMail({
-      from: '"Foodie" <foodie@gmail.com>', // sender address
+      from: '"Foodie" <abir141578@gmail.com>', // sender address
       to: receiverEmail, // recipient email
       subject: "Your Foodie OTP Code", // Subject line
       text: `Hello,
-
-Thank you for using Foodie! Your One-Time Password (OTP) is: ${otp}
-
-This code will expire in 10 minutes. Please do not share this code with anyone.
-
-If you did not request this OTP, please ignore this email.
-
-Best regards,
-The Foodie Team`, // plain text body
+        Thank you for using Foodie! Your One-Time Password (OTP) is: ${otp}
+        This code will expire in 10 minutes. Please do not share this code with anyone.
+        If you did not request this OTP, please ignore this email.
+        Best regards,
+        The Foodie Team`, // plain text body
       html: `
     <div style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f9f9f9; color: #333;">
       <div style="max-width: 600px; margin: auto; padding: 20px; background-color: #ffffff; border: 1px solid #ddd; border-radius: 8px;">
@@ -66,3 +53,4 @@ The Foodie Team`, // plain text body
     throw new Error("Failed to send email");
   }
 };
+export default sendOtp;

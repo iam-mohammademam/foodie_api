@@ -1,3 +1,4 @@
+import crypto from "crypto";
 // send success/error
 export const handleStatus = (res, status, message = "", results = null) => {
   // Validate status
@@ -82,4 +83,19 @@ export const getQueryObject = ({
 }; // generate otp
 export const generateOtp = () => {
   return Math.floor(100000 + Math.random() * 900000); // Generates a number between 100000 and 999999
+}; // check fields are undefined
+export const checkFields = (fields) => {
+  const hasFieldsToUpdate = Object.values(fields).some(
+    (value) => value != null
+  );
+
+  if (!hasFieldsToUpdate) {
+    return handleStatus(res, 400, "No fields provided.");
+  }
+}; // generate random string
+export const generateString = (length = 32) => {
+  const bytes = Math.ceil(length / 2); // Half the length since each byte gives 2 hex characters
+
+  const string = crypto.randomBytes(bytes).toString("hex").slice(0, length);
+  return string;
 };

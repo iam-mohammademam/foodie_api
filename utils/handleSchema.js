@@ -110,10 +110,10 @@ export const addOtp = async (otp, data) => {
   };
 }; // verify otp
 export const verifyOtp = async (otp, data) => {
-  if (!otp || !data) {
+  if (!otp || !data.verification) {
     throw new Error("OTP or data is missing");
   }
-  if (!data.resetPassword && data.isVerified) {
+  if (data.isVerified) {
     throw new Error("Account is already verified");
   }
   const isOtpValid = data.verification.code === otp;

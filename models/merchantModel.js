@@ -8,6 +8,7 @@ import {
   ratingSchema,
   scheduleSchema,
   tokenSchema,
+  verificationSchema,
 } from "./globalSchema.js";
 
 // Merchant Schema
@@ -25,10 +26,7 @@ const merchantSchema = new Schema(
     schedule: [scheduleSchema], // Open/Close times for each day
     rating: ratingSchema,
     tokens: [tokenSchema],
-    verification: {
-      code: { type: String }, // OTP code
-      expiresAt: { type: Date }, // Expiry time for the OTP
-    },
+    verification: verificationSchema,
     resetPassword: { type: Boolean, default: false },
     isVerified: { type: Boolean, default: false },
     role: { type: String, default: "merchant" },

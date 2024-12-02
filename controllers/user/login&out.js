@@ -11,7 +11,7 @@ import {
   validateFields,
 } from "../../utils/utils.js";
 import userModel from "../../models/userModel.js";
-import { nodemailer } from "../../middlewares/nodemailer.js";
+import sendotp from "../../utils/sendOtp.js";
 
 export const login = async (req, res) => {
   const { email, password } = req.body;
@@ -20,24 +20,21 @@ export const login = async (req, res) => {
   }
 
   try {
-    const findUser = await userModel.findOne({ email }).select("+password");
-    if (!findUser) {
+    const user = await userModel.findOne({ email }).select("+password");
+    if (!user) {
       return handleStatus(res, 404, "No account found for this email.");
     }
-    if (!findUser.isVerified) {
+    if (!user.isVerified) {
       const otp = generateOtp();
-      const token = await generateAuthToken({ email });
-      await addOtp(otp, findUser);
-      await findUser.save();
-      await nodemailer(email, otp);
-      return handleStatus(res, 401, "Please verify your email first.", {
-        token,
-      });
+      await addOtp(otp, user);
+      await user.save();
+      await sendotp(email, otp);
+      return handleStatus(res, 401, "Please verify your email first.");
     }
-    await validatePassword(password, findUser);
-    await generateAuthToken(findUser);
+    await validatePassword(password, user);
+    await generateAuthToken(user);
     // exlude password from response
-    const userToReturn = findUser.toObject();
+    const userToReturn = user.toObject();
     delete userToReturn.password;
     delete userToReturn.verification;
     delete userToReturn.resetPassword;

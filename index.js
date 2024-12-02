@@ -34,7 +34,7 @@ const configureMiddlewares = (app) => {
 const configureRoutes = (app) => {
   app.use("/user", userRoutes);
   app.use("/auth/resend-email", resendEmail);
-  // app.use("/merchant", merchantRoutes);
+  app.use("/merchant", merchantRoutes);
 
   // Handle invalid routes
   app.use((req, res) => {

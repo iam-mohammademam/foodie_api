@@ -37,6 +37,13 @@ export const ratingSchema = {
   min: [0, "Rating cannot be less than 0"],
   max: [5, "Rating cannot exceed 5"],
 };
+export const resetPasswordSchema = new Schema(
+  {
+    token: { type: String },
+    expiresAt: { type: Date },
+  },
+  { _id: false }
+);
 export const verificationSchema = new Schema(
   {
     code: { type: String },

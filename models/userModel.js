@@ -5,6 +5,7 @@ import {
   nameSchema,
   passwordSchema,
   phoneSchema,
+  resetPasswordSchema,
   tokenSchema,
   verificationSchema,
 } from "./globalSchema.js";
@@ -19,7 +20,7 @@ const userSchema = new Schema(
     tokens: [tokenSchema],
     verification: { type: verificationSchema },
     role: { type: String, default: "user" },
-    resetPassword: { type: Boolean, default: false },
+    resetPassword: { type: resetPasswordSchema },
     isVerified: { type: Boolean, default: false },
   },
   { timestamps: true }
