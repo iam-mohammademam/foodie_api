@@ -6,6 +6,7 @@ import {
   hashPassword,
   addOtp,
 } from "../../utils/handleSchema.js";
+import sendOtp from "../../utils/sendOtp.js";
 import {
   generateOtp,
   handleStatus,
@@ -18,11 +19,16 @@ export const register = async (req, res) => {
     email,
     password,
     phone,
-    address,
+    state,
+    street,
+    city,
+    postalCode,
     cuisineTypes,
     logo,
     banner,
-    schedule,
+    closedOn,
+    openTime,
+    closeTime,
   } = req.body;
 
   if (
@@ -30,12 +36,30 @@ export const register = async (req, res) => {
     !email ||
     !password ||
     !phone ||
-    !address ||
     !cuisineTypes ||
-    !schedule
+    !closedOn ||
+    !openTime ||
+    !closeTime ||
+    !state ||
+    !street ||
+    !city ||
+    !postalCode
   ) {
     return validateFields(
-      { name, email, password, phone, address, cuisineTypes, schedule },
+      {
+        name,
+        email,
+        password,
+        phone,
+        cuisineTypes,
+        closedOn,
+        openTime,
+        closeTime,
+        state,
+        street,
+        city,
+        postalCode,
+      },
       res
     );
   }
@@ -56,24 +80,29 @@ export const register = async (req, res) => {
       name,
       email,
       phone,
-      address,
+      address: {
+        state,
+        street,
+        city,
+        postalCode,
+      },
       cuisineTypes,
       logo,
       banner,
-      schedule,
+      schedule: {
+        closedOn,
+        openTime,
+        closeTime,
+      },
     });
 
     await hashPassword(password, merchant);
     await addOtp(otp, merchant);
     await merchant.save();
-    const token = await generateAuthToken({ email });
-
     // Send verification email
-    await nodemailer(email, otp);
+    await sendOtp(email, otp);
     // Return success response
-    return handleStatus(res, 201, "Registration successful. Please verify.", {
-      token,
-    });
+    return handleStatus(res, 201, "Registration successful. Please verify.");
   } catch (error) {
     console.error("Error registering merchant:", error.message);
     return handleStatus(

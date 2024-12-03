@@ -22,6 +22,7 @@ const userSchema = new Schema(
     role: { type: String, default: "user" },
     resetPassword: { type: resetPasswordSchema },
     isVerified: { type: Boolean, default: false },
+    f2a: { type: Boolean, default: false },
   },
   { timestamps: true }
 );

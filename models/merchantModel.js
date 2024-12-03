@@ -6,6 +6,7 @@ import {
   passwordSchema,
   phoneSchema,
   ratingSchema,
+  resetPasswordSchema,
   scheduleSchema,
   tokenSchema,
   verificationSchema,
@@ -23,18 +24,18 @@ const merchantSchema = new Schema(
     cuisineString: { type: String }, // Preprocessed string for indexing
     logo: { type: String }, // URL for the logo
     banner: { type: String }, // URL for the banner image
-    schedule: [scheduleSchema], // Open/Close times for each day
+    schedule: { type: scheduleSchema }, // Open/Close times for each day
     rating: ratingSchema,
     tokens: [tokenSchema],
     verification: verificationSchema,
-    resetPassword: { type: Boolean, default: false },
+    resetPassword: { type: resetPasswordSchema },
     isVerified: { type: Boolean, default: false },
     role: { type: String, default: "merchant" },
-    isActive: { type: Boolean, default: true },
+    f2a: { type: Boolean, default: false },
+    // isActive: { type: Boolean, default: true },
   },
   { timestamps: true }
 );
-
 // Indexes for performance
 merchantSchema.index({ name: "text", cuisineString: "text" });
 // Hook to preprocess cuisineTypes
@@ -45,7 +46,6 @@ merchantSchema.pre("save", async function (next) {
   }
   next();
 });
-
 // Exporting the Model
 const merchant = model("Merchant", merchantSchema);
 

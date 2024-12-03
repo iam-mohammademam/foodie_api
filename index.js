@@ -9,12 +9,10 @@ import dotenv from "dotenv";
 import connectDB from "./middlewares/connectDB.js";
 import userRoutes from "./routes/user.js";
 import merchantRoutes from "./routes/merchant.js";
-import { resendEmail } from "./controllers/resendEmail.js";
+import authRoutes from "./routes/auth.js";
 // Load environment variables
 dotenv.config();
-
 const app = express();
-
 // Middleware Configuration
 const configureMiddlewares = (app) => {
   app.use(
@@ -29,20 +27,16 @@ const configureMiddlewares = (app) => {
   app.use(helmet());
   app.use(mongoSanitize());
   app.use(morgan("dev"));
-};
-// Route Configuration
+}; // Route Configuration
 const configureRoutes = (app) => {
   app.use("/user", userRoutes);
-  app.use("/auth/resend-email", resendEmail);
+  app.use("/auth", authRoutes);
   app.use("/merchant", merchantRoutes);
-
   // Handle invalid routes
   app.use((req, res) => {
     res.status(404).json({ message: "Invalid endpoint" });
   });
-};
-
-// Initialize Server
+}; // Initialize Server
 const startServer = async () => {
   try {
     // Connect to the database
@@ -60,6 +54,5 @@ const startServer = async () => {
     console.error("Failed to start server:", error.message);
     process.exit(1); // Exit process on failure
   }
-};
-
+}; // Start server
 startServer();
