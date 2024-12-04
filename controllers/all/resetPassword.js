@@ -10,11 +10,9 @@ import sendResetLink from "../../utils/sendLink.js";
 // verify the link and add new password
 export const sendResetPasswordEmail = async (req, res) => {
   const { email } = req.body;
-
   if (!email) {
     return validateFields({ email }, res);
   }
-
   try {
     const user = await userModel
       .findOne({ email })
@@ -57,7 +55,6 @@ export const resetPassword = async (req, res) => {
     if (!user) {
       return handleStatus(res, 404, "No account found with this email.");
     }
-
     if (
       user.resetPassword.token !== token ||
       user.resetPassword.expiresAt < Date.now()

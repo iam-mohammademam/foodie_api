@@ -1,23 +1,29 @@
 import { validateFields } from "../../utils/utils.js";
 import userModel from "../../models/userModel.js";
-import { addOtp, hashPassword } from "../../utils/handleSchema.js";
-import { handleStatus, generateOtp } from "../../utils/utils.js";
+import merchantModel from "../../models/merchantModel.js";
+import { setOtp, hashPassword } from "../../utils/handleSchema.js";
+import { handleStatus } from "../../utils/utils.js";
 import sendOtp from "../../utils/sendOtp.js";
 // Register User
 export const register = async (req, res) => {
-  const { name, email, password } = req.body;
+  const { name, email, password, phone } = req.body;
   // Validate required fields
   if (!name || !email || !password) {
     return validateFields({ name, email, password }, res);
   }
   try {
-    const findUser = await userModel.findOne({ email });
-    if (findUser) {
-      return handleStatus(res, 400, "User with this email already exists.");
+    // Check if email or phone already exists
+    const existingMerchant = await merchantModel.findOne({
+      $or: [{ email }, { phone }],
+    });
+    const existingUser = await userModel.findOne({
+      $or: [{ email }, { phone }],
+    });
+    if (existingMerchant || existingUser) {
+      return handleStatus(res, 409, "Email or phone already in use");
     }
-    const otp = generateOtp();
     const user = new userModel({ name, email, password });
-    await addOtp(otp, user);
+    const otp = await setOtp(user);
     await hashPassword(password, user);
     await sendOtp(email, otp);
     await user.save();

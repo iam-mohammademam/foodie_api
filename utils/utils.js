@@ -93,8 +93,8 @@ export const checkFields = (fields) => {
     return handleStatus(res, 400, "No fields provided.");
   }
 }; // generate random string
-export const generateString = (length = 32) => {
-  const bytes = Math.ceil(length / 2); // Half the length since each byte gives 2 hex characters
-  const string = crypto.randomBytes(bytes).toString("hex").slice(0, length);
+export const generateString = () => {
+  const length = Math.floor(Math.random() * (15 - 11 + 1)) + 11;
+  const string = crypto.randomBytes(length).toString("hex");
   return string;
 };

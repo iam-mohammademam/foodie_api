@@ -18,16 +18,17 @@ export const updateData = async (req, res) => {
   if (!name && !phone) {
     return handleStatus(res, 400, "No fields provided to update.");
   }
-  const { email } = await decodeToken(token);
-  if (!email) {
-    return handleStatus(res, 401, "Invalid token");
-  }
+
   try {
     let data;
     if (isMerchant) {
-      data = await merchantModel.findOne({ email }).select("+password");
+      data = await merchantModel
+        .findOne({ "tokens.token": token })
+        .select("+password");
     } else {
-      data = await userModel.findOne({ email }).select("+password");
+      data = await userModel
+        .findOne({ "tokens.token": token })
+        .select("+password");
     }
     if (!data) {
       return handleStatus(res, 404, "User not found with this token.");
@@ -43,6 +44,7 @@ export const updateData = async (req, res) => {
     const updatedUser = data.toObject();
     delete updatedUser.password;
     delete updatedUser.verification;
+    delete updatedUser.resetPassword;
 
     return handleStatus(res, 200, "User updated successfully.", updatedUser);
   } catch (error) {
@@ -58,31 +60,32 @@ export const updatePassword = async (req, res) => {
   if (!token || !password || !newPassword) {
     return validateFields({ token, password, newPassword }, res);
   }
-  // decode token
-  const { email } = await decodeToken(token);
-  if (!email) {
-    return handleStatus(res, 401, "Invalid token");
-  }
+
   try {
     let data;
     if (isMerchant) {
       data = await merchantModel
-        .findOne({ email })
-        .select("email tokens password");
+        .findOne({ "tokens.token": token })
+        .select("password");
     } else {
-      data = await userModel.findOne({ email }).select("email tokens password");
+      data = await userModel
+        .findOne({
+          "tokens.token": token,
+        })
+        .select("password");
     }
     if (!data) {
       return handleStatus(res, 404, "User not found with this token.");
     }
-    // verify token & password
+    // validate password & hash newPassword
     await validatePassword(password, data);
-    // Update password
     await hashPassword(newPassword, data);
     await data.save();
+    // remove password from response
     const updatedUser = data.toObject();
     delete updatedUser.password;
     delete updatedUser.verification;
+    delete updatedUser.resetPassword;
     return handleStatus(res, 200, "Password updated successfully.");
   } catch (error) {
     console.error("Update Error:", error);
@@ -100,21 +103,17 @@ export const updateAddress = async (req, res) => {
   if (!state && !street && !city && !postalCode) {
     return handleStatus(res, 400, "No fields provided to update.");
   }
-  // decode token
-  const { email } = await decodeToken(token);
-  if (!email) {
-    return handleStatus(res, 401, "Invalid token");
-  }
+
   try {
     let data;
     if (isMerchant) {
       data = await merchantModel
-        .findOne({ email })
-        .select("email tokens password address");
+        .findOne({ "tokens.token": token })
+        .select("+password +address");
     } else {
       data = await userModel
-        .findOne({ email })
-        .select("email tokens password address");
+        .findOne({ "tokens.token": token })
+        .select("+password +address");
     }
     if (!data) {
       return handleStatus(res, 404, "User not found with this token.");
@@ -128,6 +127,7 @@ export const updateAddress = async (req, res) => {
     const updatedUser = data.toObject();
     delete updatedUser.password;
     delete updatedUser.verification;
+    delete updatedUser.resetPassword;
     return handleStatus(res, 200, "Address updated successfully.", updatedUser);
   } catch (error) {
     console.error("Update Error:", error);

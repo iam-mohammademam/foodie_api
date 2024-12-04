@@ -1,11 +1,6 @@
-import { nodemailer } from "../../middlewares/nodemailer.js";
 import merchantModel from "../../models/merchantModel.js";
 import userModel from "../../models/userModel.js";
-import {
-  generateAuthToken,
-  hashPassword,
-  addOtp,
-} from "../../utils/handleSchema.js";
+import { hashPassword, setOtp } from "../../utils/handleSchema.js";
 import sendOtp from "../../utils/sendOtp.js";
 import {
   generateOtp,
@@ -74,7 +69,6 @@ export const register = async (req, res) => {
     if (existingMerchant || existingUser) {
       return handleStatus(res, 409, "Email or phone already in use");
     }
-    const otp = generateOtp();
     // Create merchantModel
     const merchant = new merchantModel({
       name,
@@ -97,7 +91,7 @@ export const register = async (req, res) => {
     });
 
     await hashPassword(password, merchant);
-    await addOtp(otp, merchant);
+    const otp = await setOtp(merchant);
     await merchant.save();
     // Send verification email
     await sendOtp(email, otp);

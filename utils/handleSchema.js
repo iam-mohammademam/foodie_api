@@ -1,6 +1,7 @@
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { jwtSecret } from "../middlewares/variables.js";
+import { generateOtp, generateString } from "./utils.js";
 
 // hash & update password
 export const hashPassword = async (password, data) => {
@@ -21,38 +22,18 @@ export const validatePassword = async (password, data) => {
 }; // generate auth token
 export const generateAuthToken = async (data) => {
   if (!data) {
-    throw new Error("Data is missing");
+    throw new Error("Data is required.");
   }
-
-  try {
-    const token = jwt.sign({ id: data?._id, email: data?.email }, jwtSecret, {
-      expiresIn: "7d",
-    });
-    // Optionally add the token to the data's token list (if you want to store tokens)
-    if (data.tokens) {
-      data.tokens.push({ token });
-      await data.save();
-    }
-    return token;
-  } catch (error) {
-    throw new Error("Token generation failed");
+  const token = generateString();
+  if (data.tokens) {
+    data.tokens.push({ token });
   }
+  return token;
 }; // verify auth token
 export const verifyAuthToken = async (token, data) => {
-  try {
-    const decoded = jwt.verify(token, jwtSecret);
-    if (decoded.email !== data.email) {
-      throw new Error("Invalid token");
-    }
-
-    const tokenExists = data.tokens.some((t) => t.token === token);
-    if (!tokenExists) {
-      throw new Error("Token not found in data's tokens list");
-    }
-    // Return decoded data if the token is valid
-    return decoded;
-  } catch (error) {
-    throw new Error("Invalid or expired token");
+  const tokenExists = data.tokens.some((t) => t.token === token);
+  if (!tokenExists) {
+    throw new Error("Token not found in data's tokens list");
   }
 }; // decode token
 export const decodeToken = async (token) => {
@@ -98,15 +79,16 @@ export const handleAddress = async (addressFields, user) => {
     throw new Error(`Error updating address: ${error.message}`);
   }
 }; // add otp
-export const addOtp = async (otp, data) => {
-  if (!otp || !data) {
-    throw new Error("OTP or data is missing");
+export const setOtp = async (data) => {
+  if (!data) {
+    throw new Error("Data is missing");
   }
-
+  const otp = generateOtp();
   data.verification = {
     code: otp,
     expiresAt: new Date(Date.now() + 5 * 60 * 1000),
   };
+  return otp;
 }; // verify otp
 export const verifyOtp = async (otp, data) => {
   if (!otp || !data.verification) {
