@@ -26,6 +26,18 @@ const userSchema = new Schema(
   },
   { timestamps: true }
 );
-
+userSchema.methods.format = function () {
+  return {
+    id: this._id,
+    name: this.name,
+    email: this.email,
+    phone: this.phone,
+    address: this.address,
+    role: this.role,
+    tokens: this.tokens,
+    isVerified: this.isVerified,
+    f2a: this.f2a,
+  };
+};
 const user = model("User", userSchema);
 export default user;

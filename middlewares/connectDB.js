@@ -10,7 +10,6 @@ const connectDB = async () => {
     if (!db_url) {
       throw new Error("Database URL is not defined.");
     }
-
     await mongoose.connect(db_url, { dbName: "foodie" });
     // await merchant.collection.dropIndexes(); // Remove all indexes from the collection
     // await merchant.createIndexes(); // Re-create indexes, including the new one

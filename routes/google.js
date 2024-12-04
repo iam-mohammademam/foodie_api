@@ -1,6 +1,7 @@
 import passport from "passport";
 import { Router } from "express";
 import "../config/passport.js";
+
 const google = Router();
 
 // Route to initiate Google login
