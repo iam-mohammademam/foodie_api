@@ -5,8 +5,6 @@ import passport from "passport";
 import helmet from "helmet";
 import morgan from "morgan";
 import mongoSanitize from "express-mongo-sanitize";
-import cluster from "cluster";
-import os from "os";
 
 // Import routes and middlewares
 import connectDB from "./middlewares/connectDB.js";
@@ -77,21 +75,7 @@ const startServer = async () => {
     console.error("Failed to start server:", error.message);
     process.exit(1); // Exit process on failure
   }
-}; // clustering logic
-if (cluster.isPrimary) {
-  // Clustering logic for utilizing all CPU cores
-  const numCPUs = os.cpus().length;
-  console.log(
-    `Primary process running on PID ${process.pid}, starting ${numCPUs} workers...`
-  );
-  for (let i = 0; i < numCPUs; i++) {
-    cluster.fork();
-  }
-  cluster.on("exit", (worker) => {
-    console.error(`Worker ${worker.process.pid} died. Restarting...`);
-    cluster.fork();
-  });
-} else {
-  // Worker process: start the server
-  startServer();
-}
+};
+startServer();
+
+// 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;

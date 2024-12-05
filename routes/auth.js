@@ -1,19 +1,19 @@
 import { Router } from "express";
 
-import { verifyEmail } from "../controllers/all/verify.js";
+import { verifyEmail } from "../controllers/auth/verify.js";
 import {
   updateAddress,
   updateData,
   updatePassword,
-} from "../controllers/all/update.js";
+} from "../controllers/auth/update.js";
 import {
   resetPassword,
   sendResetPasswordEmail,
-} from "../controllers/all/resetPassword.js";
-import { login } from "../controllers/all/login.js";
-import { logout } from "../controllers/all/logout.js";
-import { deleteAccount } from "../controllers/all/delete.js";
-import { resendOtp } from "../controllers/all/resendOtp.js";
+} from "../controllers/auth/resetPassword.js";
+import { login } from "../controllers/auth/login.js";
+import { logout } from "../controllers/auth/logout.js";
+import { deleteAccount } from "../controllers/auth/delete.js";
+import { resendOtp } from "../controllers/auth/resendOtp.js";
 //
 const auth = Router();
 

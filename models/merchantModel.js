@@ -46,6 +46,26 @@ merchantSchema.pre("save", async function (next) {
   }
   next();
 });
+merchantSchema.methods.format = function () {
+  return {
+    id: this._id,
+    name: this.name,
+    email: this.email,
+    phone: this.phone,
+    address: this.address,
+    cuisineTypes: this.cuisineTypes,
+    cuisineString: this.cuisineString,
+    logo: this.logo,
+    banner: this.banner,
+    schedule: this.schedule,
+    rating: this.rating,
+    tokens: this.tokens,
+    verification: this.verification,
+    isVerified: this.isVerified,
+    role: this.role,
+    f2a: this.f2a,
+  };
+};
 // Exporting the Model
 const merchant = model("Merchant", merchantSchema);
 

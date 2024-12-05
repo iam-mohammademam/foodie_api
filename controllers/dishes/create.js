@@ -1,5 +1,6 @@
 import { handleStatus, validateFields } from "../../utils/utils.js";
 import dishModel from "../../models/dishModel.js"; // Import the Dish model
+import merchantModel from "../../models/merchantModel.js"; // Import the Merchant model
 
 export const createDish = async (req, res) => {
   const { merchant } = req.headers;
@@ -21,6 +22,10 @@ export const createDish = async (req, res) => {
   try {
     if (isNaN(price) || price <= 0) {
       return handleStatus(res, 400, "Price must be a positive number.");
+    }
+    const merchant = await merchantModel.findOne({ _id: merchant });
+    if (!merchant) {
+      return handleStatus(res, 401, "Invalid request user.");
     }
     // Create the dish
     const newDish = new dishModel({
