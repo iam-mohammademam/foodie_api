@@ -2,16 +2,10 @@ import { handleStatus, validateFields } from "../../utils/utils.js";
 import dishModel from "../../models/dishModel.js"; // Import the Dish model
 
 export const createDish = async (req, res) => {
-  const {
-    merchant,
-    name,
-    description,
-    price,
-    category,
-    image,
-    ratings,
-    ingredients,
-  } = req.body;
+  const { merchant } = req.headers;
+  const { name, description, price, category, image, ratings, ingredients } =
+    req.body;
+
   if (!name || !price || !category || !image || !merchant) {
     return validateFields(
       {

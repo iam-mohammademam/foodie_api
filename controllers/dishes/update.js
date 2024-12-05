@@ -1,9 +1,9 @@
-import { handleStatus, validateFields } from "../../utils/utils.js";
+import { handleStatus } from "../../utils/utils.js";
 import dishModel from "../../models/dishModel.js";
 
 export const updateDish = async (req, res) => {
   const { id } = req.params;
-  const { merchant } = req.query;
+  const { merchant } = req.headers;
   const {
     name,
     description,
@@ -15,24 +15,13 @@ export const updateDish = async (req, res) => {
     availability,
   } = req.body;
   // Check if the merchant ID is provided
-  if (!merchant) {
-    return handleStatus(res, 400, "Merchant ID is required.");
-  } // Check if the required fields are provided
-  if (!name || !price || !category || !image) {
-    return validateFields(
-      {
-        merchant,
-        name,
-        price,
-        category,
-        image,
-      },
-      res
-    );
-  }
+  if (!merchant || !id) {
+    return handleStatus(res, 400, "Merchant ID and Dish ID are required.");
+  } // Check is there fields to update
+
   try {
     // Validate the price
-    if (isNaN(price) || price <= 0) {
+    if ((price && isNaN(price)) || price <= 0) {
       return handleStatus(res, 400, "Price must be a positive number.");
     }
     // Find the existing dish by ID
