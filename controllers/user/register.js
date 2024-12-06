@@ -6,7 +6,7 @@ import { handleStatus } from "../../utils/utils.js";
 import sendOtp from "../../utils/sendOtp.js";
 // Register User
 export const register = async (req, res) => {
-  const { name, email, password, phone } = req.body;
+  const { name, email, password } = req.body;
   // Validate required fields
   if (!name || !email || !password) {
     return validateFields({ name, email, password }, res);
@@ -14,10 +14,10 @@ export const register = async (req, res) => {
   try {
     // Check if email or phone already exists
     const existingMerchant = await merchantModel.findOne({
-      $or: [{ email }, { phone }],
+      $or: [{ email }],
     });
     const existingUser = await userModel.findOne({
-      $or: [{ email }, { phone }],
+      $or: [{ email }],
     });
     if (existingMerchant || existingUser) {
       return handleStatus(res, 409, "Email or phone already in use");
