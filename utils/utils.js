@@ -82,7 +82,8 @@ export const getQueryObject = ({
   return query;
 }; // generate otp
 export const generateOtp = () => {
-  return Math.floor(100000 + Math.random() * 900000); // Generates a number between 100000 and 999999
+  const otp = Math.floor(10000 + Math.random() * 90000);
+  return otp;
 }; // check fields are undefined
 export const checkFields = (fields) => {
   const hasFieldsToUpdate = Object.values(fields).some(
@@ -98,3 +99,4 @@ export const generateString = () => {
   const string = crypto.randomBytes(length).toString("hex");
   return string;
 };
+generateOtp();

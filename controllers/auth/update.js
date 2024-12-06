@@ -41,15 +41,12 @@ export const updateData = async (req, res) => {
     // save user
     await data.save();
     // remove password from response
-    const updatedUser = data.toObject();
-    delete updatedUser.password;
-    delete updatedUser.verification;
-    delete updatedUser.resetPassword;
+    const formatData = data.format();
 
-    return handleStatus(res, 200, "User updated successfully.", updatedUser);
+    return handleStatus(res, 200, "Account updated successfully.", formatData);
   } catch (error) {
-    console.error("Update Error:", error);
-    return handleStatus(res, 500, error.message || "Failed to update user.");
+    console.error("Account update Error:", error);
+    return handleStatus(res, 500, error.message || "Failed to update account.");
   }
 }; //
 export const updatePassword = async (req, res) => {
@@ -81,11 +78,7 @@ export const updatePassword = async (req, res) => {
     await validatePassword(password, data);
     await hashPassword(newPassword, data);
     await data.save();
-    // remove password from response
-    const updatedUser = data.toObject();
-    delete updatedUser.password;
-    delete updatedUser.verification;
-    delete updatedUser.resetPassword;
+
     return handleStatus(res, 200, "Password updated successfully.");
   } catch (error) {
     console.error("Update Error:", error);
@@ -123,14 +116,10 @@ export const updateAddress = async (req, res) => {
     await handleAddress({ state, street, city, postalCode, country }, data);
     // save user
     await data.save();
-    // remove password from response
-    const updatedUser = data.toObject();
-    delete updatedUser.password;
-    delete updatedUser.verification;
-    delete updatedUser.resetPassword;
-    return handleStatus(res, 200, "Address updated successfully.", updatedUser);
+    const formatData = data.format();
+    return handleStatus(res, 200, "Address updated successfully.", formatData);
   } catch (error) {
-    console.error("Update Error:", error);
-    return handleStatus(res, 500, error.message || "Failed to update user.");
+    console.error("Address update Error:", error);
+    return handleStatus(res, 500, error.message || "Failed to update address.");
   }
 };

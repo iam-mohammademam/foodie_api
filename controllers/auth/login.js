@@ -31,12 +31,9 @@ export const login = async (req, res) => {
     await validatePassword(password, data);
     await data.save();
     // exlude password,verification & resetPass from response
-    const userToReturn = data.toObject();
-    delete userToReturn.password;
-    delete userToReturn.verification;
-    delete userToReturn.resetPassword;
+    const formatData = await data.format();
     // response
-    return handleStatus(res, 200, "", userToReturn);
+    return handleStatus(res, 200, "", formatData);
   } catch (error) {
     console.error("Login Error:", error);
     return handleStatus(res, 500, error.message || "Failed to login.");

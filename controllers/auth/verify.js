@@ -27,7 +27,7 @@ export const verifyEmail = async (req, res) => {
     } // verify otp
     await verifyOtp(otp, data);
     await data.save();
-    return handleStatus(res, 200, "Email verified successfully");
+    return handleStatus(res, 200, "Email is verified,please login.");
   } catch (error) {
     console.error("Error verifying email:", error.message);
     return handleStatus(res, 500, error.message || "Error verifying email.");
