@@ -14,6 +14,7 @@ import { login } from "../controllers/auth/login.js";
 import { logout } from "../controllers/auth/logout.js";
 import { deleteAccount } from "../controllers/auth/delete.js";
 import { resendOtp } from "../controllers/auth/resendOtp.js";
+import { verifyCaptcha } from "../controllers/auth/captcha.js";
 //
 const auth = Router();
 
@@ -21,6 +22,7 @@ const auth = Router();
 auth.post("/login", login);
 auth.post("/logout", logout);
 auth.delete("/delete", deleteAccount);
+auth.post("/verify-captcha", verifyCaptcha);
 auth.put("/verify", verifyEmail);
 auth.get("/resend-otp", resendOtp);
 auth.put("/update", updateData);
