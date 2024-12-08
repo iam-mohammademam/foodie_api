@@ -1,17 +1,23 @@
 import { validateFields } from "../../utils/utils.js";
 import userModel from "../../models/userModel.js";
 import merchantModel from "../../models/merchantModel.js";
-import { setOtp, hashPassword } from "../../utils/handleSchema.js";
+import {
+  setOtp,
+  hashPassword,
+  verifyCaptcha,
+} from "../../utils/handleSchema.js";
 import { handleStatus } from "../../utils/utils.js";
 import sendOtp from "../../utils/sendOtp.js";
 // Register User
 export const register = async (req, res) => {
+  const { captcha: captchaToken } = req.headers;
   const { name, email, password } = req.body;
   // Validate required fields
-  if (!name || !email || !password) {
-    return validateFields({ name, email, password }, res);
+  if (!name || !email || !password || !captchaToken) {
+    return validateFields({ name, email, password, captchaToken }, res);
   }
   try {
+    await verifyCaptcha(captchaToken, req.ip);
     // Check if email or phone already exists
     const existingMerchant = await merchantModel.findOne({
       $or: [{ email }],

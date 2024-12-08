@@ -1,6 +1,6 @@
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-import { jwtSecret } from "../middlewares/variables.js";
+import { captchaSecret, jwtSecret } from "../middlewares/variables.js";
 import { generateOtp, generateString } from "./utils.js";
 
 // hash & update password
@@ -113,4 +113,22 @@ export const deleteData = async (data) => {
     throw new Error("Data is missing");
   }
   await data.deleteOne();
+}; // verify captcha
+export const verifyCaptcha = async (token, ip) => {
+  if (!token || !ip) {
+    throw new Error("Token or ip is missing");
+  }
+  try {
+    const response = await fetch(
+      `https://www.google.com/recaptcha/api/siteverify?secret=${captchaSecret}&response=${token}&remoteip=${ip}`
+    );
+    const data = await response.json();
+    console.log(data);
+    if (!data.success) {
+      throw new Error("Captcha verification failed");
+    }
+  } catch (error) {
+    console.log(error);
+    throw new Error(error.message || "Error verifying CAPTCHA");
+  }
 };
